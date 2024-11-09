@@ -29,30 +29,30 @@ app.get("/", (request, response) => {
 });
 
 app.post("/signup", async (request, response) => {
-  // check that a username and password are provided in request.body
-  let username = request.body.username;
-  let password = request.body.password;
+  try {
+    const { username, password } = request.body;
 
-  if (!username || !password) {
-    response.status(400).json({
-      message: "Incorrect or missing sign-up credentials provided.",
+    if (!username || !password) {
+      return response.status(400).json({
+        message: "Incorrect or missing sign-up credentials provided.",
+      });
+    }
+
+    // Attempt to create the user
+    const newUser = await User.create({ username, password });
+    const newJwt = generateJWT(newUser.id, newUser.username);
+
+    return response.json({
+      jwt: newJwt,
+      user: { id: newUser.id, username: newUser.username },
+    });
+  } catch (error) {
+    console.error("Error during signup:", error);
+    return response.status(500).json({
+      message: "Internal server error",
+      error: error.message,
     });
   }
-
-  // make a user in the DB using the username and password
-  let newUser = await User.create({ username: username, password: password });
-
-  // make a JWT based on the username and userID
-  let newJwt = generateJWT(newUser.id, newUser.username);
-
-  // return the JWT
-  response.json({
-    jwt: newJwt,
-    user: {
-      id: newUser.id,
-      username: newUser.username,
-    },
-  });
 });
 
 app.get("/protectedRoute", validateUserAuth, (request, response) => {
